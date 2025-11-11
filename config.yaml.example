@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  host: "0.0.0.0"
+
+gitea:
+  base_url: "http://gitea:3000"
+  token: "your-gitea-token-here"
+
+jenkins:
+  base_url: "http://jenkins:8080"
+  username: "admin"
+  token: "your-jenkins-token-here"
+
+webhook:
+  timeout_seconds: 300  # 5 минут по умолчанию
+
+# Конфигурация репозиториев
+# Репозитории, не указанные здесь, будут игнорироваться
+repositories:
+  - owner: "test-org"
+    name: "test-repo"
+    job_pattern: "^test-repo-pr-{pr_number}$"  # Регулярное выражение для поиска джобы
+    timeout_seconds: 300  # Можно переопределить таймаут для конкретного репозитория
+  
+  - owner: "another-org"
+    name: "another-repo"
+    job_pattern: "^build-.*-pr-{pr_number}$"
+    timeout_seconds: 600

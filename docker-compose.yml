@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  webhook-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gitea-jenkins-integ
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+    environment:
+      - GIN_MODE=release
+    depends_on:
+      - gitea
+      - jenkins
+    networks:
+      - integration-network
+    restart: unless-stopped
+
+  gitea:
+    image: gitea/gitea:latest
+    container_name: gitea
+    ports:
+      - "3000:3000"
+      - "2222:22"
+    volumes:
+      - gitea_data:/data
+    networks:
+      - integration-network
+    restart: unless-stopped
+
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: jenkins
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+    networks:
+      - integration-network
+    restart: unless-stopped
+
+networks:
+  integration-network:
+    driver: bridge
+
+volumes:
+  gitea_data:
+  jenkins_data:

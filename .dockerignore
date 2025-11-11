@@ -1,0 +1,13 @@
+bin/
+coverage.out
+coverage.html
+.git/
+.gitignore
+*.md
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+go.sum
