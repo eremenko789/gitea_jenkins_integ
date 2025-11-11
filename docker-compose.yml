@@ -1,0 +1,10 @@
+services:
+  webhook-service:
+    build: .
+    container_name: gitea-jenkins-webhook
+    environment:
+      - CONFIG_FILE=/etc/webhook/config.yaml
+    volumes:
+      - ./config.example.yaml:/etc/webhook/config.yaml:ro
+    ports:
+      - "8080:8080"
