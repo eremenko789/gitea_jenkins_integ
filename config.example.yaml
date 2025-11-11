@@ -1,0 +1,31 @@
+# Example configuration for the Gitea-Jenkins webhook service
+server:
+  listen_addr: ":8080"
+  webhook_secret: "replace-me"
+  worker_pool_size: 4
+  queue_size: 100
+
+jenkins:
+  base_url: "https://jenkins.example.com"
+  username: "jenkins-user"
+  api_token: "jenkins-api-token"
+  poll_interval: 15s
+  timeout: 5m
+  job_tree: "jobs[name,url,fullName]"
+
+gitea:
+  base_url: "https://gitea.example.com/api/v1"
+  token: "gitea-personal-access-token"
+
+repositories:
+  - name: "org/repo-one"
+    job_patterns:
+      - "^PR-{{ .Number }}-build$"
+    poll_interval: 10s
+    timeout: 3m
+    success_comment_template: "✅ Jenkins job {{ .JobName }} готов: {{ .JobURL }}"
+    failure_comment_template: "⚠️ Не удалось обнаружить джобу для PR {{ .Number }} за {{ .Timeout }}."
+
+  - name: "org/repo-two"
+    job_patterns:
+      - "^deploy-repo-two-{{ .Number }}$"
