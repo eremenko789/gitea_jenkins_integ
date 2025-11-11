@@ -1,0 +1,35 @@
+server:
+  address: ":8080"
+  webhook_secret_env: "WEBHOOK_SECRET"
+
+processing:
+  worker_count: 4
+  queue_size: 128
+  default_wait_timeout: 5m
+  default_poll_interval: 15s
+
+logging:
+  level: info
+
+gitea:
+  base_url: "https://gitea.example.com"
+  token_env: "GITEA_TOKEN"
+  skip_tls_verify: false
+
+jenkins:
+  base_url: "https://jenkins.example.com"
+  user_env: "JENKINS_USER"
+  api_token_env: "JENKINS_TOKEN"
+  skip_tls_verify: false
+
+repositories:
+  - full_name: "org/repo"
+    wait_timeout: 4m
+    poll_interval: 30s
+    success_comment_template: >
+      Jenkins job detected: {{ .JobURL }} (pattern {{ .PatternName }})
+    failure_comment_template: >
+      Jenkins job matching {{ .Regex }} was not found within {{ .WaitDurationText }}.
+    patterns:
+      - name: "default"
+        regex_template: "^pr-{{ .PullRequest }}-build$"
