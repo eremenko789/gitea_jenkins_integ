@@ -18,7 +18,6 @@ type Client struct {
 	baseURL    string
 	username   string
 	apiToken   string
-	jobTree    string
 	httpClient *http.Client
 	log        *slog.Logger
 }
@@ -33,12 +32,9 @@ type jobsResponse struct {
 	Jobs []Job `json:"jobs"`
 }
 
-func NewClient(baseURL, username, apiToken, jobTree string, httpClient *http.Client, logger *slog.Logger) *Client {
+func NewClient(baseURL string, username string, apiToken string, httpClient *http.Client, logger *slog.Logger) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 10 * time.Second}
-	}
-	if jobTree == "" {
-		jobTree = "jobs[name,url,fullName]"
 	}
 	if logger == nil {
 		logger = slog.Default()
@@ -47,7 +43,6 @@ func NewClient(baseURL, username, apiToken, jobTree string, httpClient *http.Cli
 		baseURL:    strings.TrimRight(baseURL, "/"),
 		username:   username,
 		apiToken:   apiToken,
-		jobTree:    jobTree,
 		httpClient: httpClient,
 		log:        logger,
 	}
@@ -120,7 +115,7 @@ func (c *Client) findJob(ctx context.Context, pattern *regexp.Regexp, jobRoot st
 	}
 
 	query := endpoint.Query()
-	query.Set("tree", c.jobTree)
+	query.Set("tree", "jobs[name,url,fullName]")
 	endpoint.RawQuery = query.Encode()
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
@@ -138,8 +133,7 @@ func (c *Client) findJob(ctx context.Context, pattern *regexp.Regexp, jobRoot st
 
 	c.log.Debug("Jenkins request prepared",
 		"method", http.MethodGet,
-		"url", endpoint.String(),
-		"job_tree", c.jobTree)
+		"url", endpoint.String())
 
 	authHeader := req.Header.Get("Authorization")
 	if authHeader != "" {

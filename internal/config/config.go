@@ -22,7 +22,6 @@ type JenkinsConfig struct {
 	APIToken     string        `yaml:"api_token"`
 	PollInterval time.Duration `yaml:"poll_interval"`
 	Timeout      time.Duration `yaml:"timeout"`
-	JobTree      string        `yaml:"job_tree"`
 }
 
 type GiteaConfig struct {
@@ -94,9 +93,6 @@ func (c *Config) Validate() error {
 	}
 	if c.Jenkins.Timeout <= 0 {
 		c.Jenkins.Timeout = 5 * time.Minute
-	}
-	if c.Jenkins.JobTree == "" {
-		c.Jenkins.JobTree = "jobs[name,url,fullName]"
 	}
 
 	if c.Gitea.BaseURL == "" {

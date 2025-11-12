@@ -43,7 +43,7 @@ func main() {
 		"queue_size", cfg.Server.QueueSize,
 		"repositories_count", len(cfg.Repositories))
 
-	jClient := jenkins.NewClient(cfg.Jenkins.BaseURL, cfg.Jenkins.Username, cfg.Jenkins.APIToken, cfg.Jenkins.JobTree, nil, logger)
+	jClient := jenkins.NewClient(cfg.Jenkins.BaseURL, cfg.Jenkins.Username, cfg.Jenkins.APIToken, nil, logger)
 	gClient := gitea.NewClient(cfg.Gitea.BaseURL, cfg.Gitea.Token, nil, logger)
 
 	logger.Info("initializing processor and server")

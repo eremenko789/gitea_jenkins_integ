@@ -27,7 +27,7 @@ func TestWaitForJob(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := jenkins.NewClient(ts.URL, "user", "token", "", &http.Client{
+	client := jenkins.NewClient(ts.URL, "user", "token", &http.Client{
 		Timeout: time.Second,
 	}, nil)
 
@@ -50,7 +50,7 @@ func TestWaitForJobTimeout(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := jenkins.NewClient(ts.URL, "", "", "", &http.Client{Timeout: time.Second}, nil)
+	client := jenkins.NewClient(ts.URL, "", "", &http.Client{Timeout: time.Second}, nil)
 	ctx := context.Background()
 	re := regexp.MustCompile(`job`)
 	_, err := client.WaitForJob(ctx, re, "", 300*time.Millisecond, 100*time.Millisecond)
@@ -70,7 +70,7 @@ func TestWaitForJobWithJobRoot(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := jenkins.NewClient(ts.URL, "user", "token", "", &http.Client{
+	client := jenkins.NewClient(ts.URL, "user", "token", &http.Client{
 		Timeout: time.Second,
 	}, nil)
 
