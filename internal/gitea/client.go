@@ -1,3 +1,4 @@
+// Package gitea предоставляет клиент для взаимодействия с API Gitea.
 package gitea
 
 import (
@@ -12,6 +13,7 @@ import (
 	"time"
 )
 
+// Client представляет клиент для работы с API Gitea.
 type Client struct {
 	baseURL string
 	token   string
@@ -19,10 +21,14 @@ type Client struct {
 	log     *slog.Logger
 }
 
+// commentRequest представляет запрос на создание комментария в Gitea.
 type commentRequest struct {
-	Body string `json:"body"`
+	Body string `json:"body"` // Текст комментария
 }
 
+// NewClient создает новый клиент для работы с API Gitea.
+// Если httpClient равен nil, создается клиент с таймаутом 10 секунд.
+// Если logger равен nil, используется логгер по умолчанию.
 func NewClient(baseURL, token string, httpClient *http.Client, logger *slog.Logger) *Client {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 10 * time.Second}
@@ -38,6 +44,8 @@ func NewClient(baseURL, token string, httpClient *http.Client, logger *slog.Logg
 	}
 }
 
+// PostComment публикует комментарий в указанном issue или pull request репозитория Gitea.
+// repoFullName должен быть в формате "owner/repo", issueIndex - номер issue/PR.
 func (c *Client) PostComment(ctx context.Context, repoFullName string, issueIndex int64, body string) error {
 	c.log.Info("posting comment to Gitea",
 		"repo", repoFullName,
@@ -106,6 +114,7 @@ func (c *Client) PostComment(ctx context.Context, repoFullName string, issueInde
 	return nil
 }
 
+// splitRepoFullName разделяет полное имя репозитория (формат "owner/repo") на владельца и имя репозитория.
 func splitRepoFullName(fullName string) (string, string, error) {
 	parts := strings.SplitN(fullName, "/", 2)
 	if len(parts) != 2 {
@@ -114,7 +123,8 @@ func splitRepoFullName(fullName string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-// CheckAccessibility checks if Gitea is accessible by making a request to /user endpoint
+// CheckAccessibility проверяет доступность Gitea, выполняя запрос к эндпоинту /user.
+// Возвращает ошибку, если Gitea недоступен или аутентификация не удалась.
 func (c *Client) CheckAccessibility(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -145,7 +155,8 @@ func (c *Client) CheckAccessibility(ctx context.Context) error {
 	return nil
 }
 
-// GetRepository checks if the repository exists in Gitea
+// GetRepository проверяет существование репозитория в Gitea.
+// Возвращает ошибку, если репозиторий не найден, доступ запрещен или произошла другая ошибка API.
 func (c *Client) GetRepository(ctx context.Context, owner, repo string) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

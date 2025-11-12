@@ -14,6 +14,9 @@ import (
 	"github.com/example/gitea-jenkins-webhook/internal/server"
 )
 
+// runCommand запускает вебхук-сервис. Загружает конфигурацию, инициализирует клиенты
+// для работы с Jenkins и Gitea, создает процессор и сервер, затем запускает сервер
+// и обрабатывает сигналы завершения для корректного завершения работы.
 func runCommand() {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	configPath := fs.String("config", "config.yaml", "Path to configuration file")

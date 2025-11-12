@@ -1,7 +1,9 @@
+// Package webhook предоставляет типы для работы с событиями вебхуков от Gitea.
 package webhook
 
 import "time"
 
+// PullRequestEvent представляет событие pull request от Gitea.
 type PullRequestEvent struct {
 	Action      string      `json:"action"`
 	Number      int64       `json:"number"`
@@ -12,6 +14,7 @@ type PullRequestEvent struct {
 	Timestamp   time.Time   `json:"-"`
 }
 
+// PullRequest представляет информацию о pull request.
 type PullRequest struct {
 	Number int64  `json:"number"`
 	Title  string `json:"title"`
@@ -19,6 +22,7 @@ type PullRequest struct {
 	URL    string `json:"url"`
 }
 
+// Repository представляет информацию о репозитории Gitea.
 type Repository struct {
 	ID       int64  `json:"id"`
 	Name     string `json:"name"`
@@ -26,12 +30,15 @@ type Repository struct {
 	HTMLURL  string `json:"html_url"`
 }
 
+// Sender представляет информацию об отправителе события.
 type Sender struct {
 	ID       int64  `json:"id"`
 	Login    string `json:"login"`
 	FullName string `json:"full_name"`
 }
 
+// DisplayName возвращает отображаемое имя pull request.
+// Если заголовок не пуст, возвращает заголовок, иначе возвращает "PR".
 func (p PullRequest) DisplayName() string {
 	if p.Title != "" {
 		return p.Title

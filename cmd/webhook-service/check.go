@@ -13,12 +13,16 @@ import (
 	"github.com/example/gitea-jenkins-webhook/internal/jenkins"
 )
 
+// checkResult хранит результаты проверки конфигурации и подключений.
 type checkResult struct {
-	passed   int
-	errors   int
-	warnings int
+	passed   int // Количество успешных проверок
+	errors   int // Количество ошибок
+	warnings int // Количество предупреждений
 }
 
+// checkCommand выполняет проверку конфигурации и доступности сервисов.
+// Проверяет наличие и валидность файла конфигурации, доступность Jenkins и Gitea,
+// а также корректность настроек репозиториев и задач Jenkins.
 func checkCommand() {
 	fs := flag.NewFlagSet("check", flag.ExitOnError)
 	configPath := fs.String("config", "", "Path to configuration file")
@@ -122,6 +126,7 @@ func checkCommand() {
 	os.Exit(0)
 }
 
+// checkConfigFileExists проверяет существование файла конфигурации по указанному пути.
 func checkConfigFileExists(path string) error {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return fmt.Errorf("configuration file not found: %s", path)
@@ -129,6 +134,8 @@ func checkConfigFileExists(path string) error {
 	return nil
 }
 
+// validateServerConfig проверяет корректность настроек сервера в конфигурации.
+// Проверяет наличие обязательных полей: listen_addr, webhook_secret, worker_pool_size, queue_size.
 func validateServerConfig(cfg *config.Config) error {
 	if cfg.Server.ListenAddr == "" {
 		return fmt.Errorf("server.listen_addr must be provided")
@@ -145,6 +152,11 @@ func validateServerConfig(cfg *config.Config) error {
 	return nil
 }
 
+// checkRepository выполняет проверку настроек репозитория:
+// - существование репозитория в Gitea
+// - существование корневой директории задач в Jenkins (если указана)
+// - наличие задач в корневой директории
+// - соответствие задач указанному шаблону
 func checkRepository(ctx context.Context, repoRule config.RepositoryRule, jClient *jenkins.Client, gClient *gitea.Client, result *checkResult) {
 	// 7.1: Check repository exists in Gitea
 	owner, repo, err := splitRepoName(repoRule.Name)
@@ -231,6 +243,7 @@ func checkRepository(ctx context.Context, repoRule config.RepositoryRule, jClien
 	}
 }
 
+// splitRepoName разделяет полное имя репозитория (формат "owner/repo") на владельца и имя репозитория.
 func splitRepoName(fullName string) (string, string, error) {
 	parts := strings.SplitN(fullName, "/", 2)
 	if len(parts) != 2 {
@@ -239,6 +252,8 @@ func splitRepoName(fullName string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
+// getJobRootDisplay возвращает строковое представление корневой директории задач для отображения.
+// Если jobRoot пуст, возвращает "root".
 func getJobRootDisplay(jobRoot string) string {
 	if jobRoot == "" {
 		return "root"
@@ -246,6 +261,8 @@ func getJobRootDisplay(jobRoot string) string {
 	return jobRoot
 }
 
+// compileJobPattern компилирует шаблон имени задачи в регулярное выражение.
+// Заменяет плейсхолдер {{ .Number }} на \d+ перед компиляцией.
 func compileJobPattern(pattern string) (*regexp.Regexp, error) {
 	// Replace {{ .Number }} with \d+
 	replaced := strings.ReplaceAll(pattern, "{{ .Number }}", `\d+`)
