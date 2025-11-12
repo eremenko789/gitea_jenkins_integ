@@ -113,3 +113,68 @@ func splitRepoFullName(fullName string) (string, string, error) {
 	}
 	return parts[0], parts[1], nil
 }
+
+// CheckAccessibility checks if Gitea is accessible by making a request to /user endpoint
+func (c *Client) CheckAccessibility(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	endpoint := fmt.Sprintf("%s/user", c.baseURL)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", c.token))
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("gitea api request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+		return fmt.Errorf("authentication failed: status %s", resp.Status)
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("gitea api not found: status %s", resp.Status)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("gitea api error: status %s", resp.Status)
+	}
+
+	return nil
+}
+
+// GetRepository checks if the repository exists in Gitea
+func (c *Client) GetRepository(ctx context.Context, owner, repo string) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	endpoint := fmt.Sprintf("%s/repos/%s/%s", c.baseURL, owner, repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("token %s", c.token))
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("gitea api request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("repository not found: status %s", resp.Status)
+	}
+	if resp.StatusCode == http.StatusForbidden {
+		return fmt.Errorf("access denied to repository: status %s", resp.Status)
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("authentication failed: status %s", resp.Status)
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("gitea api error: status %s", resp.Status)
+	}
+
+	return nil
+}
