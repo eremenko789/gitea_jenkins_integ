@@ -22,8 +22,7 @@ gitea:
   token: "secret"
 repositories:
   - name: "org/repo"
-    job_patterns:
-      - "^build-{{ .Number }}$"
+    job_pattern: "^build-{{ .Number }}$"
     poll_interval: 1s
     timeout: 5s
 `
