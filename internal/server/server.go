@@ -1,3 +1,4 @@
+// Package server предоставляет HTTP-сервер для приема вебхуков от Gitea.
 package server
 
 import (
@@ -21,10 +22,11 @@ import (
 )
 
 const (
-	headerEvent     = "X-Gitea-Event"
-	headerSignature = "X-Gitea-Signature"
+	headerEvent     = "X-Gitea-Event"     // HTTP-заголовок с типом события Gitea
+	headerSignature = "X-Gitea-Signature" // HTTP-заголовок с подписью вебхука
 )
 
+// Server представляет HTTP-сервер для обработки вебхуков от Gitea.
 type Server struct {
 	cfg       *config.Config
 	processor *processor.Processor
@@ -32,6 +34,9 @@ type Server struct {
 	log       *slog.Logger
 }
 
+// New создает новый HTTP-сервер с указанной конфигурацией и процессором событий.
+// Если logger равен nil, используется логгер по умолчанию.
+// Регистрирует обработчики для /health и /webhook.
 func New(cfg *config.Config, proc *processor.Processor, logger *slog.Logger) *Server {
 	if logger == nil {
 		logger = slog.Default()
@@ -53,6 +58,9 @@ func New(cfg *config.Config, proc *processor.Processor, logger *slog.Logger) *Se
 	return s
 }
 
+// Run запускает HTTP-сервер и обрабатывает сигналы завершения для корректного завершения работы.
+// Запускает процессор перед стартом сервера и останавливает его при завершении.
+// Возвращает ошибку, если произошла ошибка при запуске или завершении сервера.
 func (s *Server) Run(ctx context.Context) error {
 	s.log.Info("starting processor")
 	s.processor.Start()
@@ -86,6 +94,8 @@ func (s *Server) Run(ctx context.Context) error {
 	}
 }
 
+// handleHealth обрабатывает запросы проверки здоровья сервиса (GET /health).
+// Всегда возвращает статус 200 OK с телом "ok".
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	s.log.Debug("health check request",
 		"method", r.Method,
@@ -97,6 +107,9 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	s.log.Debug("health check response sent", "status", http.StatusOK)
 }
 
+// handleWebhook обрабатывает вебхуки от Gitea (POST /webhook).
+// Проверяет тип события, валидирует подпись (если настроен секрет),
+// декодирует payload и добавляет событие в очередь обработки.
 func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	s.log.Info("webhook request received",
 		"method", r.Method,
@@ -166,6 +179,8 @@ func (s *Server) handleWebhook(w http.ResponseWriter, r *http.Request) {
 	s.log.Debug("webhook response sent", "status", http.StatusAccepted)
 }
 
+// verifySignature проверяет подпись вебхука от Gitea.
+// Сравнивает переданную подпись с вычисленной подписью на основе payload и секрета.
 func verifySignature(payload []byte, signature, secret string) error {
 	if signature == "" {
 		return fmt.Errorf("missing signature header")
@@ -178,12 +193,15 @@ func verifySignature(payload []byte, signature, secret string) error {
 	return nil
 }
 
+// computeSignature вычисляет HMAC-SHA256 подпись для payload с использованием секрета.
+// Возвращает подпись в виде hex-строки.
 func computeSignature(payload []byte, secret string) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(payload)
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// normalizeSignature нормализует подпись, удаляя префикс "sha256=" если он присутствует.
 func normalizeSignature(sig string) string {
 	s := strings.TrimSpace(sig)
 	if strings.HasPrefix(s, "sha256=") {

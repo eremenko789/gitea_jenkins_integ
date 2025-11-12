@@ -1,3 +1,4 @@
+// Package config предоставляет функциональность для загрузки и валидации конфигурации приложения.
 package config
 
 import (
@@ -9,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// ServerConfig содержит настройки HTTP-сервера.
 type ServerConfig struct {
 	ListenAddr     string `yaml:"listen_addr"`
 	WebhookSecret  string `yaml:"webhook_secret"`
@@ -16,6 +18,7 @@ type ServerConfig struct {
 	QueueSize      int    `yaml:"queue_size"`
 }
 
+// JenkinsConfig содержит настройки подключения к Jenkins.
 type JenkinsConfig struct {
 	BaseURL      string        `yaml:"base_url"`
 	Username     string        `yaml:"username"`
@@ -24,11 +27,13 @@ type JenkinsConfig struct {
 	Timeout      time.Duration `yaml:"timeout"`
 }
 
+// GiteaConfig содержит настройки подключения к Gitea.
 type GiteaConfig struct {
 	BaseURL string `yaml:"base_url"`
 	Token   string `yaml:"token"`
 }
 
+// RepositoryRule определяет правила обработки событий для конкретного репозитория.
 type RepositoryRule struct {
 	Name                   string        `yaml:"name"`
 	JobRoot                string        `yaml:"job_root"`
@@ -39,6 +44,8 @@ type RepositoryRule struct {
 	FailureCommentTemplate string        `yaml:"failure_comment_template"`
 }
 
+// Config представляет полную конфигурацию приложения, включая настройки сервера,
+// подключения к внешним сервисам и правила обработки репозиториев.
 type Config struct {
 	Server       ServerConfig      `yaml:"server"`
 	Jenkins      JenkinsConfig     `yaml:"jenkins"`
@@ -47,10 +54,14 @@ type Config struct {
 	RepoIndex    map[string]RepoID `yaml:"-"`
 }
 
+// RepoID представляет идентификатор репозитория с его правилами обработки.
 type RepoID struct {
-	Rule RepositoryRule
+	Rule RepositoryRule // Правила обработки для репозитория
 }
 
+// Load загружает конфигурацию из YAML файла по указанному пути.
+// Выполняет валидацию и построение индекса репозиториев.
+// Возвращает загруженную и валидированную конфигурацию или ошибку.
 func Load(path string) (*Config, error) {
 	slog.Info("loading configuration", "path", path)
 	data, err := os.ReadFile(path)
@@ -74,6 +85,8 @@ func Load(path string) (*Config, error) {
 	return &cfg, nil
 }
 
+// Validate проверяет корректность конфигурации и устанавливает значения по умолчанию
+// для необязательных полей. Возвращает ошибку, если конфигурация некорректна.
 func (c *Config) Validate() error {
 	if c.Server.ListenAddr == "" {
 		c.Server.ListenAddr = ":8080"
@@ -126,6 +139,7 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// buildIndex строит индекс репозиториев для быстрого поиска правил по полному имени репозитория.
 func (c *Config) buildIndex() {
 	c.RepoIndex = make(map[string]RepoID, len(c.Repositories))
 	for _, repo := range c.Repositories {
@@ -133,6 +147,8 @@ func (c *Config) buildIndex() {
 	}
 }
 
+// GetRepositoryRule возвращает правила обработки для репозитория с указанным полным именем.
+// Возвращает правила и флаг наличия репозитория в конфигурации.
 func (c *Config) GetRepositoryRule(fullName string) (RepositoryRule, bool) {
 	if c.RepoIndex == nil {
 		c.buildIndex()

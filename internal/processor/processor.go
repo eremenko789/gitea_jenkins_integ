@@ -1,3 +1,4 @@
+// Package processor предоставляет функциональность для обработки событий вебхуков от Gitea.
 package processor
 
 import (
@@ -16,14 +17,18 @@ import (
 	"github.com/example/gitea-jenkins-webhook/pkg/webhook"
 )
 
+// JenkinsClient определяет интерфейс для работы с задачами Jenkins.
 type JenkinsClient interface {
 	WaitForJob(ctx context.Context, pattern *regexp.Regexp, jobRoot string, timeout, interval time.Duration) (*jenkins.Job, error)
 }
 
+// GiteaClient определяет интерфейс для публикации комментариев в Gitea.
 type GiteaClient interface {
 	PostComment(ctx context.Context, repoFullName string, issueIndex int64, body string) error
 }
 
+// Processor обрабатывает события pull request из Gitea, ожидает появления соответствующих
+// задач в Jenkins и публикует комментарии с результатами в Gitea.
 type Processor struct {
 	cfg     *config.Config
 	log     *slog.Logger
@@ -35,6 +40,8 @@ type Processor struct {
 	mu      sync.Mutex
 }
 
+// New создает новый процессор событий с указанной конфигурацией и клиентами.
+// Если logger равен nil, используется логгер по умолчанию.
 func New(cfg *config.Config, jc JenkinsClient, gc GiteaClient, logger *slog.Logger) *Processor {
 	if logger == nil {
 		logger = slog.Default()
@@ -48,6 +55,8 @@ func New(cfg *config.Config, jc JenkinsClient, gc GiteaClient, logger *slog.Logg
 	}
 }
 
+// Start запускает процессор, создавая пул воркеров для обработки событий.
+// Если процессор уже запущен, выводит предупреждение и не выполняет повторный запуск.
 func (p *Processor) Start() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -67,6 +76,7 @@ func (p *Processor) Start() {
 	p.log.Info("processor started successfully", "workers", p.cfg.Server.WorkerPoolSize)
 }
 
+// Stop останавливает процессор, закрывая очередь и ожидая завершения всех воркеров.
 func (p *Processor) Stop() {
 	p.mu.Lock()
 	if !p.started {
@@ -80,6 +90,8 @@ func (p *Processor) Stop() {
 	p.log.Info("processor stopped, all workers finished")
 }
 
+// Enqueue добавляет событие в очередь обработки.
+// Возвращает ошибку, если процессор не запущен или очередь переполнена.
 func (p *Processor) Enqueue(evt webhook.PullRequestEvent) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -103,6 +115,8 @@ func (p *Processor) Enqueue(evt webhook.PullRequestEvent) error {
 	}
 }
 
+// worker обрабатывает события из очереди. Запускается в отдельной горутине.
+// id - уникальный идентификатор воркера для логирования.
 func (p *Processor) worker(id int) {
 	p.log.Debug("worker started", "worker_id", id)
 	defer func() {
@@ -118,6 +132,11 @@ func (p *Processor) worker(id int) {
 	}
 }
 
+// processEvent обрабатывает одно событие pull request:
+// - проверяет наличие правил для репозитория
+// - обрабатывает только события opened и reopened
+// - ожидает появления задачи Jenkins по шаблону
+// - публикует комментарий в Gitea с результатом
 func (p *Processor) processEvent(ctx context.Context, evt webhook.PullRequestEvent) {
 	p.log.Debug("processing event",
 		"action", evt.Action,
@@ -249,6 +268,8 @@ func (p *Processor) processEvent(ctx context.Context, evt webhook.PullRequestEve
 	}
 }
 
+// executeTemplate выполняет шаблон с указанными данными и возвращает результат.
+// name используется для идентификации шаблона в сообщениях об ошибках.
 func executeTemplate(name, tpl string, data any) (string, error) {
 	t, err := template.New(name).Parse(tpl)
 	if err != nil {

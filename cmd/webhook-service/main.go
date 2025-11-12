@@ -1,27 +1,51 @@
+// Package main предоставляет точку входа для вебхук-сервиса интеграции Gitea и Jenkins.
+// Сервис обрабатывает события pull request из Gitea и отслеживает соответствующие задачи в Jenkins.
 package main
 
 import (
-	"context"
-	"flag"
+	"fmt"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
-
-	"github.com/example/gitea-jenkins-webhook/internal/config"
-	"github.com/example/gitea-jenkins-webhook/internal/gitea"
-	"github.com/example/gitea-jenkins-webhook/internal/jenkins"
-	"github.com/example/gitea-jenkins-webhook/internal/processor"
-	"github.com/example/gitea-jenkins-webhook/internal/server"
 )
 
+// main является точкой входа приложения. Обрабатывает аргументы командной строки
+// и запускает соответствующую команду (run или check).
 func main() {
-	configPath := flag.String("config", "config.yaml", "Path to configuration file")
-	debugFlag := flag.Bool("debug", false, "Enable debug logging")
-	flag.Parse()
+	if len(os.Args) < 2 {
+		printUsage()
+		os.Exit(1)
+	}
 
+	command := os.Args[1]
+	os.Args = os.Args[1:] // Remove command from args for flag parsing
+
+	switch command {
+	case "run":
+		runCommand()
+	case "check":
+		checkCommand()
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown command: %s\n\n", command)
+		printUsage()
+		os.Exit(1)
+	}
+}
+
+// printUsage выводит информацию об использовании программы в стандартный вывод.
+func printUsage() {
+	fmt.Fprintf(os.Stdout, "Usage: webhook-service <command> [flags]\n\n")
+	fmt.Fprintf(os.Stdout, "Commands:\n")
+	fmt.Fprintf(os.Stdout, "  run     Run the webhook service\n")
+	fmt.Fprintf(os.Stdout, "  check   Check configuration and connectivity\n\n")
+	fmt.Fprintf(os.Stdout, "Use \"webhook-service <command> -h\" for more information about a command.\n")
+}
+
+// setupLogger создает и настраивает логгер с указанным уровнем логирования.
+// Если debug равен true, устанавливается уровень Debug, иначе - Info.
+// Возвращает настроенный логгер и устанавливает его как логгер по умолчанию.
+func setupLogger(debug bool) *slog.Logger {
 	logLevel := slog.LevelInfo
-	if *debugFlag {
+	if debug {
 		logLevel = slog.LevelDebug
 	}
 
@@ -29,34 +53,5 @@ func main() {
 		Level: logLevel,
 	}))
 	slog.SetDefault(logger)
-
-	logger.Info("starting webhook service", "config_path", *configPath, "debug", *debugFlag)
-
-	cfg, err := config.Load(*configPath)
-	if err != nil {
-		logger.Error("failed to load config", "err", err)
-		os.Exit(1)
-	}
-	logger.Info("configuration loaded successfully",
-		"server_addr", cfg.Server.ListenAddr,
-		"worker_pool_size", cfg.Server.WorkerPoolSize,
-		"queue_size", cfg.Server.QueueSize,
-		"repositories_count", len(cfg.Repositories))
-
-	jClient := jenkins.NewClient(cfg.Jenkins.BaseURL, cfg.Jenkins.Username, cfg.Jenkins.APIToken, nil, logger)
-	gClient := gitea.NewClient(cfg.Gitea.BaseURL, cfg.Gitea.Token, nil, logger)
-
-	logger.Info("initializing processor and server")
-	proc := processor.New(cfg, jClient, gClient, logger)
-	srv := server.New(cfg, proc, logger)
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	logger.Info("webhook service started successfully")
-	if err := srv.Run(ctx); err != nil {
-		logger.Error("server terminated with error", "err", err)
-		os.Exit(1)
-	}
-	logger.Info("webhook service stopped")
+	return logger
 }

@@ -34,8 +34,11 @@ ci: tidy lint test build cover
 clean:
 	rm -rf $(BUILD_DIR) coverage.out
 
-run:
-	go run ./cmd/webhook-service -config ./config.yaml --debug
+run-server:
+	go run ./cmd/webhook-service run -config ./config.yaml --debug
+
+run-check:
+	go run ./cmd/webhook-service check -config ./config.yaml --debug
 
 run-build: build
 	./bin/webhook-service -config ./config.yaml
